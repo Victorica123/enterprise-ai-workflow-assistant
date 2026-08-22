@@ -3,7 +3,9 @@ from pathlib import Path
 import os
 import statistics
 import sys
+import tempfile
 from time import perf_counter
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,7 +16,9 @@ sys.path.insert(0, str(API_DIR))
 os.environ.setdefault("LLM_ROUTER_ENABLED", "0")
 
 from app.agentic_rag import answer_agentic_question  # noqa: E402
+from app.document_parser import parse_document  # noqa: E402
 from app.embeddings import warm_up_embeddings  # noqa: E402
+from app.rag import ingest_document  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -45,6 +49,16 @@ QUALITY_GATES = {
 
 
 def main() -> int:
+    # 自包含门禁：临时库 + 自带语料（与 v3~v6 一致），不依赖开发库状态。
+    # 旧版直读开发库，全新克隆里库为空会让"该回答"用例全部误判为拒答。
+    with tempfile.TemporaryDirectory() as temp_dir:
+        with patch("app.database.DB_PATH", Path(temp_dir) / "v2-evaluation.sqlite3"):
+            corpus = ROOT / "docs" / "sample-project-delay-cn.pdf"
+            ingest_document(corpus.name, parse_document(filename=corpus.name, raw=corpus.read_bytes()))
+            return _run_cases()
+
+
+def _run_cases() -> int:
     warm_up_embeddings()  # 模型加载延迟不计入请求 P95（生产上启动时预热）
     results: list[dict[str, object]] = []
     for case in CASES:
