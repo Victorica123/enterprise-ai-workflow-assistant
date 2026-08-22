@@ -145,10 +145,13 @@ docs/                     指南与设计文档（见 docs/README.md）
 
 ## 文档
 
+- [架构说明](docs/architecture.md)——分层图、Agentic 流水线、审批时序、数据模型（Mermaid）
 - [项目总结报告（架构图 · 指标 · 路线）](docs/project-report.md)
 - [工程化落地优化路线](docs/engineering-optimization.md)
 - [V1 学习与开发说明](docs/v1-guide.md)
 - [文档索引](docs/README.md)
+
+参与贡献见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 后续路线
 
