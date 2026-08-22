@@ -16,6 +16,7 @@
 # 1. 启动后端（无需任何 API Key，本地模板模式即可完整体验）
 cd apps/api
 pip install -r requirements.txt
+# 国内网络下载慢可改用镜像：pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 uvicorn app.main:app --reload --port 8000
 
 # 2. 启动前端（新开一个终端，回到仓库根目录）

@@ -26,13 +26,29 @@ except ImportError:
     HAS_NUMPY = False
 
 
+class _FloatLike:
+    """numpy 缺失时的等价替身：非内置 float，但可被 float() 转换。"""
+
+    __slots__ = ("_value",)
+
+    def __init__(self, value: float) -> None:
+        self._value = value
+
+    def __float__(self) -> float:
+        return self._value
+
+
 class FakeEmbeddingModel:
-    """返回 numpy float32 的假模型，用于验证类型转换与入库链路。"""
+    """返回 numpy float32 的假模型，用于验证类型转换与入库链路。
+
+    只装 requirements.txt 的环境（CI / 全新克隆）没有 numpy，
+    降级为 _FloatLike 以保持同一转换路径被覆盖。
+    """
 
     def embed(self, texts: list[str]):
-        import numpy as np
-
-        return [np.full(8, index / 10.0, dtype=np.float32) for index in range(len(texts))]
+        if HAS_NUMPY:
+            return [np.full(8, index / 10.0, dtype=np.float32) for index in range(len(texts))]
+        return [[_FloatLike(index / 10.0)] * 8 for index in range(len(texts))]
 
 
 class RealEmbeddingProviderTests(unittest.TestCase):
