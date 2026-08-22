@@ -1,5 +1,8 @@
 # Enterprise AI Workflow Assistant
 
+[![CI](https://github.com/Victorica123/enterprise-ai-workflow-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/Victorica123/enterprise-ai-workflow-assistant/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 企业智能工单与知识助手平台：一个从 V1 迭代到 V6 的 **Agentic RAG 全链路参考实现**——知识库问答、多轮检索、关系图谱、工具调用、人工审批、评测门禁与 token 成本观测，全部内置于一个零外部依赖（无 Neo4j / 无向量数据库 / 无需 API Key）的单体仓库。
 
 ```text
