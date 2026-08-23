@@ -31,7 +31,8 @@ class LLMPricing:
 
 def load_local_env() -> None:
     api_dir = Path(__file__).resolve().parents[1]
-    workspace_dir = Path(__file__).resolve().parents[3]
+    # 容器内 /app/app/config.py 只有 3 层父级，不能用 parents[3]（会 IndexError）
+    workspace_dir = api_dir.parent.parent
 
     for env_path in (workspace_dir / ".env", api_dir / ".env"):
         load_env_file(env_path)

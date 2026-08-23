@@ -72,20 +72,18 @@ jobs:
           docker build -t ea-api ./apps/api
           docker build -t ea-web ./apps/web
 
-      - name: Compose up and smoke test
+      - name: Compose up
+        run: docker compose up -d --wait || true
+
+      - name: Dump api logs
+        if: always()
+        run: docker compose logs api || true
+
+      - name: Smoke test
         run: |
-          docker compose up -d
-          for i in $(seq 1 30); do
-            if curl -sf http://127.0.0.1:8080/api/health; then break; fi
-            sleep 3
-          done
-          # 失败时先输出容器日志，便于定位启动崩溃
-          if ! curl -sf http://127.0.0.1:8080/api/health | grep '"status":"ok"'; then
-            echo "=== api container logs ==="
-            docker compose logs api || true
-            echo "=== ps ==="
-            docker compose ps || true
-            exit 1
-          fi
+          curl -sf http://127.0.0.1:8080/api/health | grep '"status":"ok"'
           curl -sf http://127.0.0.1:8080/ | grep -q "Enterprise AI Workflow Assistant"
-          docker compose down -v
+
+      - name: Teardown
+        if: always()
+        run: docker compose down -v || true
