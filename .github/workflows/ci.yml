@@ -82,7 +82,8 @@ jobs:
       - name: Smoke test
         run: |
           curl -sf http://127.0.0.1:8080/api/health | grep '"status":"ok"'
-          curl -sf http://127.0.0.1:8080/ | grep -q "Enterprise AI Workflow Assistant"
+          # index.html 的 title 是中文（h1 在 JS bundle 里渲染），断言用真实标题
+          curl -sf http://127.0.0.1:8080/ | grep -q "企业智能工单与知识助手"
 
       - name: Teardown
         if: always()
