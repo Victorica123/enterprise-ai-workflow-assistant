@@ -79,6 +79,13 @@ jobs:
             if curl -sf http://127.0.0.1:8080/api/health; then break; fi
             sleep 3
           done
-          curl -sf http://127.0.0.1:8080/api/health | grep '"status":"ok"'
+          # 失败时先输出容器日志，便于定位启动崩溃
+          if ! curl -sf http://127.0.0.1:8080/api/health | grep '"status":"ok"'; then
+            echo "=== api container logs ==="
+            docker compose logs api || true
+            echo "=== ps ==="
+            docker compose ps || true
+            exit 1
+          fi
           curl -sf http://127.0.0.1:8080/ | grep -q "Enterprise AI Workflow Assistant"
           docker compose down -v
