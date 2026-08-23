@@ -4,7 +4,7 @@ import {
 } from "lucide-react";
 import {
   type ActorRole, type ChatLog, type ChatLogDetail, type ChatMetricsSummary, type TraceStep,
-  getChatLogDetail, listChatLogs,
+  getChatLogDetail, isPermissionError, listChatLogs,
 } from "../api";
 import {
   MetricItem, UsageBars, formatDate, formatDecimal, formatMilliseconds,
@@ -23,13 +23,18 @@ export function MonitorView({ metricsSummary, onRefresh, actorRole }: {
   const [expandedId, setExpandedId] = React.useState<number | null>(null);
   const [expandedDetail, setExpandedDetail] = React.useState<ChatLogDetail | null>(null);
   const [isLoadingLogs, setIsLoadingLogs] = React.useState(false);
+  const [logsPermissionHint, setLogsPermissionHint] = React.useState<string | null>(null);
 
   const refreshLogs = React.useCallback(async () => {
     setIsLoadingLogs(true);
     try {
       setLogs(await listChatLogs(outcomeFilter, 50, actorRole));
-    } catch {
-      // metrics endpoints may not be running yet
+      setLogsPermissionHint(null);
+    } catch (caught) {
+      // viewer 角色无权读取请求日志时提示切换角色；其余错误静默（服务可能未启动）
+      setLogsPermissionHint(
+        isPermissionError(caught) ? "当前角色（viewer）无权查看请求日志，请在右上角切换为 operator 或 admin。" : null,
+      );
     } finally {
       setIsLoadingLogs(false);
     }
@@ -154,7 +159,9 @@ export function MonitorView({ metricsSummary, onRefresh, actorRole }: {
             </button>
           </span>
         </h2>
-        {logs.length === 0 ? (
+        {logsPermissionHint ? (
+          <div className="empty-state">{logsPermissionHint}</div>
+        ) : logs.length === 0 ? (
           <div className="empty-state">暂无请求日志。提问后这里会记录问题、结果、token 与轨迹。</div>
         ) : (
           <div className="ticket-table-wrapper">

@@ -542,8 +542,16 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
 
   if (!response.ok) {
     const message = payload?.detail ?? `请求失败，状态码 ${response.status}`;
-    throw new Error(typeof message === "string" ? message : JSON.stringify(message));
+    const error = new Error(typeof message === "string" ? message : JSON.stringify(message));
+    // 附带状态码，调用方可按 403 等给出针对性提示
+    (error as Error & { status?: number }).status = response.status;
+    throw error;
   }
 
   return payload as T;
+}
+
+/** 判断是否为权限不足（403），用于角色切换提示 */
+export function isPermissionError(error: unknown): boolean {
+  return typeof error === "object" && error !== null && (error as { status?: number }).status === 403;
 }

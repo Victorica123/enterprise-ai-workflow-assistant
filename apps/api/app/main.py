@@ -4,11 +4,13 @@
 模型预热）在 lifespan 中执行，import 本模块不再产生副作用。
 """
 import logging
+import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app import __version__
 from app.config import get_default_answer_mode, get_llm_settings, get_retriever_mode, load_local_env
 from app.database import get_embedding_stats, init_db
 from app.embeddings import warm_up_embeddings
@@ -29,6 +31,8 @@ from app.tools import init_tools
 
 logger = logging.getLogger(__name__)
 
+_STATE: dict[str, object] = {"started_at": None}
+
 load_local_env()
 setup_logging()
 
@@ -41,15 +45,32 @@ async def lifespan(_: FastAPI):
     # A3: 启动时预加载真实 embedding 模型（不可用时为空操作），
     # 避免第一个 /chat 请求承担秒级模型加载延迟。
     warm_up_embeddings()
+    _STATE["started_at"] = time.monotonic()
     logger.info("api_started")
     yield
 
 
+TAG_METADATA = [
+    {"name": "chat", "description": "问答：standard / agentic 两种工作流，返回回答、来源证据、执行轨迹与 token 成本。"},
+    {"name": "documents", "description": "知识库文档管理：上传（.txt/.md/.pdf）、列表、删除。写操作需 operator+。"},
+    {"name": "tickets", "description": "工单管理与状态草稿；写操作需 operator+。"},
+    {"name": "observability", "description": "指标、请求日志与回放、工具调用审计、用户反馈。审计数据需 operator+。"},
+    {"name": "graph", "description": "关系图谱：概览、实体、关系、关系链查询与重建。重建需 operator+。"},
+    {"name": "embeddings", "description": "Embedding 覆盖率查询与全量重建。重建需 operator+。"},
+]
+
 app = FastAPI(
     title="Enterprise AI Workflow Assistant API",
-    description="V5 knowledge QA + agentic RAG + tickets + tools + GraphRAG + observability.",
-    version="0.5.0",
+    description=(
+        "企业智能工单与知识助手平台 API。\n\n"
+        "**鉴权**：所有端点接受 `X-User-Role`（viewer / operator / admin，默认 viewer）；"
+        "写操作与审计数据端点要求 operator+；`X-User-Id` 用于审批职责分离。\n\n"
+        "零配置即可运行：不配置 LLM Key 时使用本地模板回答模式。"
+    ),
+    version=__version__,
     lifespan=lifespan,
+    openapi_tags=TAG_METADATA,
+    license_info={"name": "MIT", "url": "https://opensource.org/licenses/MIT"},
 )
 
 app.add_middleware(
@@ -79,12 +100,17 @@ for feature_router in (
 # 健康检查 & 系统状态
 # ---------------------------------------------------------------------------
 
-@app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+@app.get("/health", summary="健康检查", tags=["health"])
+def health() -> dict[str, object]:
+    started_at = _STATE["started_at"]
+    return {
+        "status": "ok",
+        "version": __version__,
+        "uptime_seconds": round(time.monotonic() - started_at, 1) if started_at else 0.0,
+    }
 
 
-@app.get("/system/status", response_model=SystemStatus)
+@app.get("/system/status", response_model=SystemStatus, summary="系统状态（文档/Chunk/LLM/Embedding）")
 def get_system_status() -> SystemStatus:
     documents = list_documents()
     embedding = build_embedding_status(get_embedding_stats())

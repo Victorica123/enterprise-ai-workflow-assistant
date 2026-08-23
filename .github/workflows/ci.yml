@@ -60,3 +60,25 @@ jobs:
 
       - name: Type check and build
         run: npm run build
+
+  docker:
+    name: Docker 镜像构建与 compose 冒烟
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build images
+        run: |
+          docker build -t ea-api ./apps/api
+          docker build -t ea-web ./apps/web
+
+      - name: Compose up and smoke test
+        run: |
+          docker compose up -d
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:8080/api/health; then break; fi
+            sleep 3
+          done
+          curl -sf http://127.0.0.1:8080/api/health | grep '"status":"ok"'
+          curl -sf http://127.0.0.1:8080/ | grep -q "Enterprise AI Workflow Assistant"
+          docker compose down -v

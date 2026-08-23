@@ -7,6 +7,7 @@ import {
 import {
   approveAction,
   askQuestion,
+  isPermissionError,
   type ActorRole,
   type AnswerMode,
   type ChatMetricsSummary,
@@ -72,12 +73,29 @@ function App() {
   const [apiFailureNotice, setApiFailureNotice] = React.useState<ApiFailureNotice | null>(null);
 
   // V3: ticket & approval state
-  const [activeTab, setActiveTab] = React.useState<"qa" | "tickets" | "graph" | "monitor">("qa");
+  // hash 深链路由：#/qa #/tickets #/graph #/monitor 可直达对应面板（支持回退/分享链接）
+  const readTabFromHash = (): "qa" | "tickets" | "graph" | "monitor" => {
+    const tab = window.location.hash.replace(/^#\/?/, "");
+    return (["qa", "tickets", "graph", "monitor"] as const).includes(tab as never)
+      ? (tab as "qa" | "tickets" | "graph" | "monitor")
+      : "qa";
+  };
+  const [activeTab, setActiveTab] = React.useState<"qa" | "tickets" | "graph" | "monitor">(readTabFromHash);
+  const switchTab = React.useCallback((tab: "qa" | "tickets" | "graph" | "monitor") => {
+    window.location.hash = `/${tab}`;
+    setActiveTab(tab);
+  }, []);
+  React.useEffect(() => {
+    const onHashChange = () => setActiveTab(readTabFromHash());
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
   const [ticketList, setTicketList] = React.useState<TicketListResponse | null>(null);
   const [pendingActions, setPendingActions] = React.useState<Awaited<ReturnType<typeof listPendingActions>>>([]);
   const [toolMetrics, setToolMetrics] = React.useState<Awaited<ReturnType<typeof getToolMetrics>> | null>(null);
   const [toolCalls, setToolCalls] = React.useState<Awaited<ReturnType<typeof listToolCalls>>>([]);
   const [isLoadingTickets, setIsLoadingTickets] = React.useState(false);
+  const [ticketsPermissionHint, setTicketsPermissionHint] = React.useState<string | null>(null);
   const [approvingActionId, setApprovingActionId] = React.useState<string | null>(null);
   // V5: answer feedback state
   const [answerFeedback, setAnswerFeedback] = React.useState<"up" | "down" | null>(null);
@@ -117,8 +135,12 @@ function App() {
       setPendingActions(actions);
       setToolMetrics(metrics);
       setToolCalls(calls);
-    } catch {
-      // ticket endpoints may not be running yet
+      setTicketsPermissionHint(null);
+    } catch (caught) {
+      // viewer 角色无法读取审批/审计数据时给出切换提示，其余错误静默（服务可能未启动）
+      setTicketsPermissionHint(
+        isPermissionError(caught) ? "当前角色（viewer）无权查看待审批与审计数据，请在右上角切换为 operator 或 admin。" : null,
+      );
     } finally {
       setIsLoadingTickets(false);
     }
@@ -334,20 +356,20 @@ function App() {
 
       <nav className="tab-nav">
         <button className={"tab-button" + (activeTab === "qa" ? " active" : "")}
-          onClick={() => setActiveTab("qa")}>
+          onClick={() => switchTab("qa")}>
           <Bot size={18} /><span>知识问答</span>
         </button>
         <button className={"tab-button" + (activeTab === "tickets" ? " active" : "")}
-          onClick={() => { setActiveTab("tickets"); void refreshTickets(); }}>
+          onClick={() => { switchTab("tickets"); void refreshTickets(); }}>
           <ClipboardList size={18} /><span>工单管理</span>
           {pendingActions.length > 0 ? <span className="badge">{pendingActions.length}</span> : null}
         </button>
         <button className={"tab-button" + (activeTab === "graph" ? " active" : "")}
-          onClick={() => setActiveTab("graph")}>
+          onClick={() => switchTab("graph")}>
           <Network size={18} /><span>关系图谱</span>
         </button>
         <button className={"tab-button" + (activeTab === "monitor" ? " active" : "")}
-          onClick={() => { setActiveTab("monitor"); void refreshWorkspace(); }}>
+          onClick={() => { switchTab("monitor"); void refreshWorkspace(); }}>
           <LineChart size={18} /><span>运行监控</span>
         </button>
       </nav>
@@ -366,6 +388,7 @@ function App() {
         <TicketsView {...{
           ticketList, pendingActions, toolMetrics, toolCalls, isLoadingTickets, approvingActionId,
           actorRole, handleDeleteTicket, handleApprove, handleStatusDraft, statusTag, priorityTag,
+          permissionHint: ticketsPermissionHint,
         }} />
       ) : activeTab === "graph" ? (
         <GraphView actorRole={actorRole} setError={setError} />

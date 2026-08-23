@@ -22,7 +22,8 @@ MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(50 * 1024 * 1024)))
 router = APIRouter(tags=["documents"])
 
 
-@router.post("/documents", response_model=DocumentUploadResponse)
+@router.post("/documents", response_model=DocumentUploadResponse, summary="上传文档（.txt/.md/.pdf，≤50MB）",
+             responses={403: {"description": "viewer 无写权限"}})
 async def upload_document(
     file: UploadFile = File(...),
     x_user_role: str = Header(default="viewer"),
@@ -69,12 +70,13 @@ def process_uploaded_document(filename: str, raw: bytes) -> DocumentUploadRespon
     return ingest_document(filename=filename, content=content)
 
 
-@router.get("/documents", response_model=list[DocumentSummary])
+@router.get("/documents", response_model=list[DocumentSummary], summary="文档列表")
 def get_documents() -> list[DocumentSummary]:
     return list_documents()
 
 
-@router.delete("/documents/{document_id}")
+@router.delete("/documents/{document_id}", summary="删除文档（级联删除 chunk 与图谱）",
+             responses={403: {"description": "viewer 无写权限"}, 404: {"description": "文档不存在"}})
 def remove_document(document_id: str, x_user_role: str = Header(default="viewer")) -> dict[str, str]:
     require_write_role(validate_actor_role(x_user_role))
     deleted = delete_document(document_id)

@@ -10,12 +10,13 @@ from app.status_service import build_embedding_status
 router = APIRouter(tags=["embeddings"])
 
 
-@router.get("/embeddings/status", response_model=EmbeddingStatus)
+@router.get("/embeddings/status", response_model=EmbeddingStatus, summary="Embedding 覆盖率状态")
 def get_embeddings_status() -> EmbeddingStatus:
     return build_embedding_status(get_embedding_stats())
 
 
-@router.post("/embeddings/rebuild", response_model=EmbeddingRebuildResponse)
+@router.post("/embeddings/rebuild", response_model=EmbeddingRebuildResponse, summary="全量重建 embedding（operator+）",
+             responses={403: {"description": "viewer 无写权限"}})
 def rebuild_embeddings(x_user_role: str = Header(default="viewer")) -> EmbeddingRebuildResponse:
     require_write_role(validate_actor_role(x_user_role))
     stats = rebuild_chunk_embeddings()

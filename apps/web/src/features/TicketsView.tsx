@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  CheckCircle2, ClipboardList, Loader2, ScrollText, ThumbsDown, ThumbsUp, Ticket, Trash2,
+  CheckCircle2, ClipboardList, Loader2, ScrollText, ShieldQuestion, ThumbsDown, ThumbsUp, Ticket, Trash2,
 } from "lucide-react";
 import {
   type ActorRole, type TicketListResponse, getToolMetrics, listPendingActions, listToolCalls,
@@ -23,11 +23,18 @@ export function TicketsView(props: {
   handleStatusDraft: (ticketId: string, newStatus: string) => void;
   statusTag: Record<string, string>;
   priorityTag: Record<string, string>;
+  permissionHint?: string | null;
 }) {
   const p = props;
   const [nextStatuses, setNextStatuses] = React.useState<Record<string, string>>({});
   return (
     <div className="tickets-container">
+      {p.permissionHint ? (
+        <div className="banner info-banner">
+          <ShieldQuestion size={18} />
+          <span>{p.permissionHint}</span>
+        </div>
+      ) : null}
       <section className="v3-metrics-band">
         <MetricItem label="工具调用" value={p.toolMetrics?.total_calls ?? 0} />
         <MetricItem label="执行成功率" value={formatPercent(p.toolMetrics?.success_rate)} />

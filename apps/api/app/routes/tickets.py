@@ -30,7 +30,7 @@ from app.tools import execute_tool, resolve_tool_action
 router = APIRouter(tags=["tickets"])
 
 
-@router.get("/tickets", response_model=TicketListResponse)
+@router.get("/tickets", response_model=TicketListResponse, summary="工单列表（状态/优先级/关键词过滤）")
 def get_tickets(
     status: str | None = None,
     priority: str | None = None,
@@ -44,7 +44,7 @@ def get_tickets(
     )
 
 
-@router.get("/tickets/{ticket_id}", response_model=TicketResponse)
+@router.get("/tickets/{ticket_id}", response_model=TicketResponse, summary="工单详情")
 def get_ticket_by_id(ticket_id: str) -> TicketResponse:
     ticket = get_ticket(ticket_id)
     if ticket is None:
@@ -52,7 +52,8 @@ def get_ticket_by_id(ticket_id: str) -> TicketResponse:
     return TicketResponse(**ticket.to_dict())
 
 
-@router.post("/tickets", response_model=TicketResponse)
+@router.post("/tickets", response_model=TicketResponse, summary="手动创建工单（operator+）",
+             responses={403: {"description": "viewer 无写权限"}})
 def create_ticket_manual(
     request: TicketCreateRequest,
     x_user_role: str = Header(default="viewer"),
@@ -70,7 +71,7 @@ def create_ticket_manual(
     return TicketResponse(**ticket.to_dict())
 
 
-@router.post("/tickets/{ticket_id}/status-draft", response_model=PendingActionResponse)
+@router.post("/tickets/{ticket_id}/status-draft", response_model=PendingActionResponse, summary="生成状态变更草稿（进入审批）")
 def create_ticket_status_draft(
     ticket_id: str,
     request: TicketStatusDraftRequest,
@@ -92,7 +93,8 @@ def create_ticket_status_draft(
     return PendingActionResponse(**action.to_dict())
 
 
-@router.delete("/tickets/{ticket_id}")
+@router.delete("/tickets/{ticket_id}", summary="删除工单（operator+）",
+             responses={403: {"description": "viewer 无写权限"}, 404: {"description": "工单不存在"}})
 def remove_ticket(ticket_id: str, x_user_role: str = Header(default="viewer")) -> dict[str, str]:
     require_write_role(validate_actor_role(x_user_role))
     if not delete_ticket(ticket_id):
@@ -100,7 +102,7 @@ def remove_ticket(ticket_id: str, x_user_role: str = Header(default="viewer")) -
     return {"status": "deleted", "ticket_id": ticket_id}
 
 
-@router.get("/pending-actions", response_model=list[PendingActionResponse])
+@router.get("/pending-actions", response_model=list[PendingActionResponse], summary="待审批操作队列（operator+）")
 def get_pending_actions(
     status: str = "pending",
     x_user_role: str = Header(default="viewer"),
@@ -110,7 +112,9 @@ def get_pending_actions(
     return [PendingActionResponse(**action.to_dict()) for action in actions]
 
 
-@router.post("/pending-actions/{action_id}/approve", response_model=ApprovalResponse)
+@router.post("/pending-actions/{action_id}/approve", response_model=ApprovalResponse,
+             summary="批准/拒绝待审批操作（发起人不能自批）",
+             responses={403: {"description": "无审批权限或触发职责分离"}, 404: {"description": "操作不存在"}})
 def approve_action(
     action_id: str,
     request: ApprovalRequest,

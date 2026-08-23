@@ -16,7 +16,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["chat"])
 
 
-@router.post("/chat", response_model=ChatResponse)
+@router.post("/chat", response_model=ChatResponse, summary="知识库问答（standard / agentic）",
+             responses={200: {"description": "回答 + 来源证据 + 执行轨迹 + token 用量 + 待审批操作"}})
 def chat(
     request: ChatRequest,
     x_user_role: str = Header(default="viewer"),

@@ -41,6 +41,27 @@ python scripts/seed_demo.py
 检索默认走关键词模式，embedding 模型缺失时自动降级为哈希向量。接入 DeepSeek/OpenAI、
 真实语义 embedding 等增强能力见下方[可选配置](#可选配置)。
 
+### Docker 一键启动（可选）
+
+```bash
+docker compose up --build
+```
+
+访问 <http://127.0.0.1:8080>（前端 nginx 托管，`/api/` 同源反代后端，SQLite 数据落在
+`api-data` 卷）。CI 会构建两个镜像并做 compose 冒烟测试，保证 Dockerfile 始终可用。
+
+## 界面预览
+
+| 知识问答（证据 + 执行轨迹） | 工单与审批 |
+| --- | --- |
+| ![知识问答](docs/images/qa.png) | ![工单与审批](docs/images/tickets.png) |
+
+| 关系图谱（分层可视化） | 运行监控（指标 / 成本 / 日志回放） |
+| --- | --- |
+| ![关系图谱](docs/images/graph.png) | ![运行监控](docs/images/monitor.png) |
+
+> 截图来自 `python scripts/seed_demo.py` 灌入演示数据后的界面；支持 `#/qa` `#/tickets` `#/graph` `#/monitor` 深链直达。
+
 ## 核心特性
 
 | 能力 | 说明 |

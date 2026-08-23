@@ -16,7 +16,10 @@ class ApiContractTests(unittest.TestCase):
         status = self.client.get("/system/status")
 
         self.assertEqual(health.status_code, 200)
-        self.assertEqual(health.json(), {"status": "ok"})
+        # 健康检查 v1.0 起附带版本与运行时长（增量字段，status 语义不变）
+        self.assertEqual(health.json()["status"], "ok")
+        self.assertIn("version", health.json())
+        self.assertIn("uptime_seconds", health.json())
         self.assertEqual(status.status_code, 200)
         self.assertIn("document_count", status.json())
         self.assertIn("embedding", status.json())

@@ -508,6 +508,11 @@ input[type="file"]::file-selector-button:hover {
   box-shadow: var(--shadow-xs);
 }
 
+.banner.info-banner {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
 .banner > svg {
   flex: 0 0 auto;
 }
